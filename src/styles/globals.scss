@@ -1,0 +1,88 @@
+/* globals.scss */
+
+/* 1️⃣ Tailwind layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2️⃣ Import your variables */
+@import "./variables.scss";
+
+/* 3️⃣ Global resets */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 4️⃣ Body defaults */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: $bg-light;   // equivalent to Tailwind bg-background-light
+  color: $text-primary;           // default text color
+  line-height: 1.6;
+}
+
+/* 5️⃣ Link defaults */
+a {
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    color: $color-primary;
+  }
+}
+
+/* 6️⃣ Button defaults */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+/* 7️⃣ Input, textarea, select resets */
+input,
+textarea,
+select {
+  border: none;
+  outline: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+}
+
+/* 8️⃣ Optional: Headings defaults */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+/* 9️⃣ Optional: Images */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/*  🔹 Additional utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}

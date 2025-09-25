@@ -1,0 +1,42 @@
+// variables.scss
+
+// Brand Colors (from logo)
+$color-primary: #0bb0ed;   // main brand blue
+$color-primary-light: #6ccdea;
+$color-primary-lighter: #a7e9f6;
+$color-accent: #10c4fa;
+$color-accent-light: #ccf8fa;
+$color-background-light: #f5fbfa;
+
+// Neutral / Gray Scale
+$color-gray-dark: #a6a5a6;
+$color-gray: #b8b4b4;
+$color-gray-light: #e5e5e5;
+$color-gray-lighter: #f5f5f5;
+$color-white: #ffffff;
+$color-black: #000000;
+
+// Status Colors
+$color-success: #22c55e;   // green-500
+$color-warning: #f59e0b;   // amber-500
+$color-error: #ef4444;     // red-500
+$color-info: #3b82f6;      // blue-500
+
+// Text Colors
+$text-primary: $color-black;
+$text-secondary: $color-gray-dark;
+$text-muted: $color-gray;
+
+// Border Colors
+$border-default: $color-gray-light;
+$border-muted: $color-gray-lighter;
+
+// Background Colors
+$bg-primary: $color-primary;
+$bg-secondary: $color-primary-light;
+$bg-light: $color-background-light;
+$bg-muted: $color-gray-lighter;
+
+// Gradients
+$gradient-primary: linear-gradient(135deg, $color-primary, $color-accent);
+$gradient-light: linear-gradient(135deg, $color-primary-lighter, $color-accent-light);
