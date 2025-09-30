@@ -18,8 +18,10 @@
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-hot-toast": "^2.6.0",
     "react-redux": "^9.2.0",
     "recharts": "^3.2.1",
+    "sass": "^1.93.2",
     "yup": "^1.7.1"
   },
   "devDependencies": {

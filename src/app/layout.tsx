@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import { Provider } from "react-redux";
 import { store } from "../store";
 import { Toaster } from "react-hot-toast"; // import Toaster
-import "../styles/globals.scss";
+import "./globals.css";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
