@@ -3,34 +3,35 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
+import Input from "@/components/forms/Input";
+import { useForm } from "@/components/forms/useForm";
+import { emailOrPhoneValidator, requiredValidator } from "@/components/forms/validators";
+import * as Yup from "yup";
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/dashboard");
-    }, 1000);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const formik = useForm({
+    initialValues: {
+      emailOrPhone: "",
+      password: "",
+    },
+    validationSchema: {
+      emailOrPhone: emailOrPhoneValidator,
+      password: requiredValidator("Password"),
+    },
+    onSubmit: async (values) => {
+      setIsLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        setIsLoading(false);
+        router.push("/dashboard");
+      }, 1000);
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-accent flex items-center justify-center p-4">
@@ -48,33 +49,25 @@ export default function LoginPage() {
             <p className="text-gray-600">Enter your credentials to access your account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
-                />
-              </div>
-            </div>
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
+            {/* Email or Phone Field */}
+            <Input
+              label="Email or Phone Number"
+              name="emailOrPhone"
+              type="text"
+              required
+              value={formik.values.emailOrPhone}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.emailOrPhone && formik.errors.emailOrPhone ? formik.errors.emailOrPhone : undefined}
+              icon={<User className="h-5 w-5 text-gray-400" />}
+              placeholder="Enter your email or phone number"
+            />
 
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -85,9 +78,12 @@ export default function LoginPage() {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-colors ${
+                    formik.touched.password && formik.errors.password ? "border-red-500" : "border-gray-300"
+                  }`}
                   placeholder="Enter your password"
                 />
                 <button
@@ -102,6 +98,9 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {formik.touched.password && formik.errors.password && (
+                <p className="mt-1 text-sm text-red-600">{formik.errors.password}</p>
+              )}
             </div>
 
             {/* Remember Me & Forgot Password */}

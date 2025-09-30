@@ -3,52 +3,75 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2 } from "lucide-react";
+import { RegistrationData, UserRole } from "@/types/user";
+import Input from "@/components/forms/Input";
+import Select from "@/components/forms/Select";
+import Checkbox from "@/components/forms/Checkbox";
+import { useForm } from "@/components/forms/useForm";
+import { emailValidator, passwordValidator, phoneValidator, nameValidator, requiredValidator } from "@/components/forms/validators";
+import * as Yup from "yup";
 
 export default function SignupPage() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    company: "",
-    acceptTerms: false,
-  });
+  const [userRole, setUserRole] = useState<UserRole>("individual");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-    
-    if (!formData.acceptTerms) {
-      alert("Please accept the terms and conditions");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/dashboard");
-    }, 1000);
-  };
+  const countryCodeOptions = [
+    { label: "+1", value: "+1" },
+    { label: "+44", value: "+44" },
+    { label: "+91", value: "+91" },
+    { label: "+86", value: "+86" },
+    { label: "+33", value: "+33" },
+    { label: "+49", value: "+49" },
+    { label: "+81", value: "+81" },
+    { label: "+61", value: "+61" },
+  ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+  const formik = useForm({
+    initialValues: {
+      companyName: "",
+      name: "",
+      email: "",
+      phonenumber: "",
+      countryCode: "+1",
+      password: "",
+      confirmPassword: "",
+      acceptTerms: false,
+      role: "individual" as UserRole,
+    },
+    validationSchema: {
+      companyName: userRole === "agency" ? requiredValidator("Company name") : Yup.string(),
+      name: nameValidator,
+      email: emailValidator,
+      phonenumber: phoneValidator,
+      countryCode: Yup.string().required(),
+      password: passwordValidator,
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref('password')], 'Passwords must match')
+        .required('Please confirm your password'),
+      acceptTerms: Yup.boolean()
+        .oneOf([true], 'You must accept the terms and conditions'),
+      role: Yup.string().required(),
+    },
+    onSubmit: async (values) => {
+      setIsLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        setIsLoading(false);
+        router.push("/dashboard");
+      }, 1000);
+    },
+  });
+
+  const handleRoleChange = (role: UserRole) => {
+    setUserRole(role);
+    formik.setFieldValue('role', role);
+    if (role === "individual") {
+      formik.setFieldValue('companyName', '');
+    }
   };
 
   return (
@@ -67,117 +90,114 @@ export default function SignupPage() {
             <p className="text-gray-600">Get started with your logistics management journey</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                    placeholder="First name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                    placeholder="Last name"
-                  />
-                </div>
-              </div>
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
+            {/* User Role Selection */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => handleRoleChange("individual")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  userRole === "individual"
+                    ? "bg-white text-primary shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <User className="h-4 w-4 inline mr-2" />
+                Individual
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRoleChange("agency")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  userRole === "agency"
+                    ? "bg-white text-primary shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Building2 className="h-4 w-4 inline mr-2" />
+                Agency
+              </button>
             </div>
+
+            {/* Company Name Field (only for agency) */}
+            {userRole === "agency" && (
+              <Input
+                label="Company Name"
+                name="companyName"
+                type="text"
+                required
+                value={formik.values.companyName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.companyName && formik.errors.companyName ? formik.errors.companyName : undefined}
+                icon={<Building2 className="h-5 w-5 text-gray-400" />}
+                placeholder="Enter your company name"
+              />
+            )}
+
+            {/* Name Field */}
+            <Input
+              label={userRole === "agency" ? "Contact Person Name" : "Full Name"}
+              name="name"
+              type="text"
+              required
+              value={formik.values.name}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
+              icon={<User className="h-5 w-5 text-gray-400" />}
+              placeholder={userRole === "agency" ? "Contact person name" : "Enter your full name"}
+            />
 
             {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
-                />
-              </div>
-            </div>
+            <Input
+              label="Email Address"
+              name="email"
+              type="email"
+              required
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && formik.errors.email ? formik.errors.email : undefined}
+              icon={<Mail className="h-5 w-5 text-gray-400" />}
+              placeholder="Enter your email"
+            />
 
             {/* Phone Field */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
+              <label htmlFor="phonenumber" className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <Select
+                    name="countryCode"
+                    options={countryCodeOptions}
+                    value={formik.values.countryCode}
+                    onChange={formik.handleChange}
+                    className="text-sm"
+                  />
                 </div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                  placeholder="Enter your phone number"
-                />
+                <div className="flex-1">
+                  <Input
+                    name="phonenumber"
+                    type="tel"
+                    value={formik.values.phonenumber}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.phonenumber && formik.errors.phonenumber ? formik.errors.phonenumber : undefined}
+                    icon={<Phone className="h-5 w-5 text-gray-400" />}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
               </div>
-            </div>
-
-            {/* Company Field */}
-            <div>
-              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
-                Company Name (Optional)
-              </label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                value={formData.company}
-                onChange={handleInputChange}
-                className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-                placeholder="Your company name"
-              />
             </div>
 
             {/* Password Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -187,10 +207,12 @@ export default function SignupPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-colors ${
+                      formik.touched.password && formik.errors.password ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Create password"
                   />
                   <button
@@ -205,11 +227,14 @@ export default function SignupPage() {
                     )}
                   </button>
                 </div>
+                {formik.touched.password && formik.errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.password}</p>
+                )}
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
+                  Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -219,10 +244,12 @@ export default function SignupPage() {
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                    value={formik.values.confirmPassword}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-colors ${
+                      formik.touched.confirmPassword && formik.errors.confirmPassword ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Confirm password"
                   />
                   <button
@@ -237,24 +264,22 @@ export default function SignupPage() {
                     )}
                   </button>
                 </div>
+                {formik.touched.confirmPassword && formik.errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.confirmPassword}</p>
+                )}
               </div>
             </div>
 
             {/* Terms and Conditions */}
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="acceptTerms"
-                  name="acceptTerms"
-                  type="checkbox"
-                  required
-                  checked={formData.acceptTerms}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-              </div>
-              <div className="ml-3 text-sm">
-                <label htmlFor="acceptTerms" className="text-gray-700">
+            <Checkbox
+              name="acceptTerms"
+              checked={formik.values.acceptTerms}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.acceptTerms && formik.errors.acceptTerms ? formik.errors.acceptTerms : undefined}
+              required
+              label={
+                <>
                   I agree to the{" "}
                   <Link href="/terms" className="text-primary hover:text-primary-light">
                     Terms and Conditions
@@ -263,9 +288,9 @@ export default function SignupPage() {
                   <Link href="/privacy" className="text-primary hover:text-primary-light">
                     Privacy Policy
                   </Link>
-                </label>
-              </div>
-            </div>
+                </>
+              }
+            />
 
             {/* Submit Button */}
             <button

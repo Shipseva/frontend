@@ -20,10 +20,10 @@ import {
 export default function DashboardPage() {
   // Mock data - replace with actual data from your API
   const stats = [
-    { name: "Total Orders", value: "1,234", change: "+12%", changeType: "positive", icon: Package },
-    { name: "Active Shipments", value: "89", change: "+5%", changeType: "positive", icon: Truck },
-    { name: "Revenue", value: "$45,678", change: "+8%", changeType: "positive", icon: DollarSign },
-    { name: "Customers", value: "2,456", change: "+15%", changeType: "positive", icon: Users },
+    { name: "Total Orders", value: "1,234", change: "+12%", changeType: "positive", icon: Package, bgColor: "bg-blue-50", iconColor: "text-blue-600" },
+    { name: "Active Shipments", value: "89", change: "+5%", changeType: "positive", icon: Truck, bgColor: "bg-green-50", iconColor: "text-green-600" },
+    { name: "Revenue", value: "$45,678", change: "+8%", changeType: "positive", icon: DollarSign, bgColor: "bg-yellow-50", iconColor: "text-yellow-600" },
+    { name: "Customers", value: "2,456", change: "+15%", changeType: "positive", icon: Users, bgColor: "bg-purple-50", iconColor: "text-purple-600" },
   ];
 
   const recentOrders = [
