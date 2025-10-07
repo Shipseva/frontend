@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2 } from "lucide-react";
 import { RegistrationData, UserRole } from "@/types/user";
+import { useRegisterUserMutation } from "@/store/api/authApi";
 import Input from "@/components/forms/Input";
 import Select from "@/components/forms/Select";
 import Checkbox from "@/components/forms/Checkbox";
@@ -16,8 +17,8 @@ export default function SignupPage() {
   const [userRole, setUserRole] = useState<UserRole>("individual");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [registerUser, { isLoading, error }] = useRegisterUserMutation();
 
   const countryCodeOptions = [
     { label: "+1", value: "+1" },
@@ -28,6 +29,7 @@ export default function SignupPage() {
     { label: "+49", value: "+49" },
     { label: "+81", value: "+81" },
     { label: "+61", value: "+61" },
+    { label: "91", value: "+91" },
   ];
 
   const formik = useForm({
@@ -57,12 +59,23 @@ export default function SignupPage() {
       role: Yup.string().required(),
     },
     onSubmit: async (values) => {
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
+      try {
+        const registrationData: RegistrationData = {
+          name: values.name,
+          phone: `${values.countryCode}${values.phonenumber}`,
+          email: values.email,
+          companyName: values.companyName || "",
+          password: values.password,
+          role: values.role
+        };
+        
+        const result = await registerUser(registrationData).unwrap();
+        console.log('Registration successful:', result);
         router.push("/dashboard");
-      }, 1000);
+      } catch (err) {
+        console.error('Registration failed:', err);
+        // Error is handled by the error state from the mutation
+      }
     },
   });
 
@@ -291,6 +304,15 @@ export default function SignupPage() {
                 </>
               }
             />
+
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-600 text-sm">
+                  Registration failed. Please check your information and try again.
+                </p>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button

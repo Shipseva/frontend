@@ -2,8 +2,12 @@
 
 import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
+import { AuthWrapper } from "@/components/AuthWrapper";
+import { ToastTest } from "@/components/ToastTest";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { RootState } from "@/store";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -11,21 +15,19 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
-
-  // Mock user data - replace with actual user data from your auth system
-  const user = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-  };
+  const { user } = useSelector((state: RootState) => state.user);
 
   return (
-    <div className="min-h-screen bg-bg-light">
-      <Navbar user={user} currentPath={pathname} />
-      <main className="flex-1">
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <AuthWrapper>
+      <div className="min-h-screen bg-bg-light">
+        <Navbar user={user} currentPath={pathname} />
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
+
+      </div>
+    </AuthWrapper>
   );
 }
 

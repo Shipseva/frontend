@@ -23,40 +23,26 @@ export interface AgencyUser extends BaseUser {
 
 export type User = IndividualUser | AgencyUser;
 
-// Login credentials - can use either email or phone
+// Login credentials
 export interface LoginCredentials {
-  email?: string;
-  phonenumber?: string;
-  countryCode?: string;
+  identifier: string; // Can be email or phone number
   password: string;
 }
 
 // Registration data
-export interface IndividualRegistration {
+export interface RegistrationData {
   name: string;
+  phone: string;
   email: string;
-  phonenumber: string;
-  countryCode: string;
-  password: string;
-  role: "individual";
-}
-
-export interface AgencyRegistration {
   companyName: string;
-  name: string;
-  email: string;
-  phonenumber: string;
-  countryCode: string;
   password: string;
-  role: "agency";
+  role: "individual" | "agency";
 }
-
-export type RegistrationData = IndividualRegistration | AgencyRegistration;
 
 // API Response types
 export interface AuthResponse {
   token: string;
-  user: User;
+  user: UserProfile;
   message?: string;
 }
 

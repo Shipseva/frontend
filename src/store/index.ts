@@ -4,17 +4,19 @@ import userReducer from "./slices/userSlice";
 // import { userApi } from "./api/userApi";
 // import { orderApi } from "./api/orderApi";
 import { useDispatch } from "react-redux";
-import { userApi } from "./api";
+import { authApi, userApi } from "./api";
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
     // order: orderReducer,
+    [authApi.reducerPath]: authApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
     // [orderApi.reducerPath]: orderApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
+      .concat(authApi.middleware)
       .concat(userApi.middleware)
     //   .concat(orderApi.middleware)
       ,

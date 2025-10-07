@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
+import { useLoginUserMutation } from "@/store/api/authApi";
+import { setUser, clearRedirectUrl } from "@/store/slices/userSlice";
+import { RootState } from "@/store";
 import Input from "@/components/forms/Input";
 import { useForm } from "@/components/forms/useForm";
 import { emailOrPhoneValidator, requiredValidator } from "@/components/forms/validators";
@@ -11,8 +15,10 @@ import * as Yup from "yup";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { redirectUrl } = useSelector((state: RootState) => state.user);
+  const [loginUser, { isLoading, error }] = useLoginUserMutation();
 
   const formik = useForm({
     initialValues: {
@@ -24,12 +30,26 @@ export default function LoginPage() {
       password: requiredValidator("Password"),
     },
     onSubmit: async (values) => {
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        router.push("/dashboard");
-      }, 1000);
+      try {
+        const loginData = {
+          identifier: values.emailOrPhone,
+          password: values.password
+        };
+        
+        const result = await loginUser(loginData).unwrap();
+        // Token is automatically set as HTTP-only cookie by the server
+        // AuthWrapper will handle getUser call with the cookie
+        
+        // Clear the redirect URL and navigate
+        dispatch(clearRedirectUrl());
+        
+        // Navigate to the stored redirect URL or dashboard
+        const targetUrl = redirectUrl || "/dashboard";
+        router.push(targetUrl);
+      } catch (err) {
+        console.error('Login failed:', err);
+        // Error is handled by the error state from the mutation
+      }
     },
   });
 
@@ -123,6 +143,15 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-600 text-sm">
+                  Login failed. Please check your credentials and try again.
+                </p>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button

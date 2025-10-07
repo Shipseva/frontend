@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLogoutUserMutation } from "@/store/api/userApi";
 import { 
   Menu, 
   X, 
@@ -31,6 +32,7 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();
+  const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Package },
@@ -48,9 +50,14 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
     { name: "Orders History", href: "/dashboard/tools/orders-history", icon: History },
   ];
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    router.push("/auth/login");
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      // logout() action is automatically dispatched in userApi.ts
+      // redirect is handled in userSlice.ts
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -143,10 +150,11 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      disabled={isLoggingOut}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      Sign out
+                      {isLoggingOut ? 'Signing out...' : 'Sign out'}
                     </button>
                   </div>
                 )}
