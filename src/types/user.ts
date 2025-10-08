@@ -54,6 +54,7 @@ export interface UserProfile {
   countryCode: string;
   role: UserRole;
   companyName?: string; // Only for agency users
+  isVerified: boolean; // KYC verification status
   createdAt: string;
   updatedAt: string;
 }

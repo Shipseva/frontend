@@ -1,3 +1,4 @@
+import React from 'react';
 import toast from 'react-hot-toast';
 
 // Toast configuration
@@ -86,4 +87,21 @@ export const getSuccessMessage = (response: any, defaultMessage: string): string
   }
   
   return defaultMessage;
+};
+
+// Custom KYC warning toast with action buttons
+export const showKYCWarningToast = () => {
+  const toastId = toast.custom(
+    (t) => {
+      // Dynamically import the React component
+      const { KYCWarningToast } = require('@/components/KYCWarningToast');
+      return React.createElement(KYCWarningToast, { toast: t });
+    },
+    {
+      duration: Infinity, // Never auto-dismiss
+      position: 'top-right',
+    }
+  );
+  
+  return toastId;
 };

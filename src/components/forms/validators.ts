@@ -21,3 +21,24 @@ export const emailOrPhoneValidator = Yup.string()
     return emailRegex.test(value) || phoneRegex.test(value.replace(/\D/g, ''));
   })
   .required("Email or phone number is required");
+
+// KYC Validators
+export const panValidator = Yup.string()
+  .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format (e.g., ABCDE1234F)")
+  .required("PAN number is required");
+
+export const aadharValidator = Yup.string()
+  .matches(/^[0-9]{12}$/, "Aadhar number must be exactly 12 digits")
+  .required("Aadhar number is required");
+
+export const gstValidator = Yup.string()
+  .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST format")
+  .optional();
+
+export const ifscValidator = Yup.string()
+  .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
+  .optional();
+
+export const accountNumberValidator = Yup.string()
+  .matches(/^[0-9]{9,18}$/, "Account number must be 9-18 digits")
+  .optional();
