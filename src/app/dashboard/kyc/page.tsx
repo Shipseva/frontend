@@ -1,22 +1,32 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2, Loader2 } from 'lucide-react';
 import { RootState } from '@/store';
 import Input from '@/components/forms/Input';
-import FileUpload from '@/components/forms/FileUpload';
+import S3FileUpload from '@/components/forms/S3FileUpload';
 import FormWrapper from '@/components/forms/FormWrapper';
 import { useForm } from '@/components/forms/useForm';
 import { panValidator, aadharValidator, gstValidator, ifscValidator, accountNumberValidator } from '@/components/forms/validators';
+import { useSubmitKYCMutation, KYCSubmissionData } from '@/store/api/kycApi';
+import { uploadFile } from '@/lib/upload';
+import toast from 'react-hot-toast';
 import * as Yup from 'yup';
 
 const KYCPage = () => {
   const router = useRouter();
   const { user } = useSelector((state: RootState) => state.user);
   const [currentStep, setCurrentStep] = useState(1);
-  // Define initial values
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const hasSubmittedRef = useRef(false);
+  
+  // API hooks
+  const [submitKYC, { isLoading: isSubmitting }] = useSubmitKYCMutation();
+  
+  // Define initial values - now storing File objects locally
   const initialValues = {
     // PAN Card (Mandatory)
     panNumber: '',
@@ -35,11 +45,102 @@ const KYCPage = () => {
     bankDocument: null as File | null,
   };
 
-  const handleSubmit = (formValues: typeof initialValues) => {
-    // TODO: Implement KYC submission
-    console.log('KYC Data:', formValues);
-    alert('KYC submitted successfully! Your documents are under review.');
-    router.push('/dashboard');
+  const handleSubmit = async (formValues: typeof initialValues) => {
+    // Prevent multiple submissions
+    if (hasSubmittedRef.current || isSubmittingRef.current || isSubmittingForm || isSubmitting) {
+      console.log('BLOCKING: Form already submitted or in progress');
+      return;
+    }
+    
+    console.log('✅ STARTING KYC SUBMISSION');
+    hasSubmittedRef.current = true;
+    isSubmittingRef.current = true;
+    setIsSubmittingForm(true);
+    
+    try {
+      // Step 1: Upload all files to S3
+      console.log('📤 UPLOADING FILES TO S3...');
+      const fileUploadPromises: Promise<{ fileUrl: string }>[] = [];
+      const fileFields = [
+        { field: 'panDocument', documentType: 'pan' },
+        { field: 'aadharFront', documentType: 'aadhar_front' },
+        { field: 'aadharBack', documentType: 'aadhar_back' },
+        { field: 'gstDocument', documentType: 'gst' },
+        { field: 'bankDocument', documentType: 'bank' }
+      ];
+      
+      for (const { field, documentType } of fileFields) {
+        const file = formValues[field as keyof typeof formValues] as File | null;
+        if (file) {
+          console.log(`Uploading ${field}:`, file.name);
+            fileUploadPromises.push(
+              uploadFile(file, documentType, undefined, 'kyc')
+            );
+        }
+      }
+      
+      // Wait for all file uploads to complete
+      const uploadResults = await Promise.all(fileUploadPromises);
+      console.log('✅ ALL FILES UPLOADED:', uploadResults);
+      
+      // Step 2: Map uploaded files to their URLs
+      const uploadedUrls: Record<string, string> = {};
+      let uploadIndex = 0;
+      for (const { field } of fileFields) {
+        const file = formValues[field as keyof typeof formValues] as File | null;
+        if (file) {
+          uploadedUrls[field] = uploadResults[uploadIndex].fileUrl;
+          uploadIndex++;
+        }
+      }
+      
+      console.log('📋 UPLOADED URLS:', uploadedUrls);
+      
+      // Step 3: Prepare KYC submission data with uploaded file URLs
+      const kycData: KYCSubmissionData = {
+        aadhar: {
+          aadharNumber: formValues.aadharNumber,
+          aadharFront: uploadedUrls.aadharFront || '',
+          aadharBack: uploadedUrls.aadharBack || '',
+          isVerified: false,
+        },
+        pan: {
+          panNumber: formValues.panNumber,
+          panFront: uploadedUrls.panDocument || '',
+          panBack: uploadedUrls.panDocument || '', // Assuming single PAN document
+          isVerified: false,
+        },
+        ifsc: formValues.bankIfsc || undefined,
+        accountNumber: formValues.bankAccountNumber || undefined,
+        accountHolderName: user?.name || undefined,
+        bankName: formValues.bankName || undefined,
+        branchName: undefined,
+        gstNumber: formValues.gstNumber || undefined,
+        gstCertificate: uploadedUrls.gstDocument || undefined,
+        businessType: 'individual',
+      };
+      
+      console.log('🚀 SUBMITTING KYC DATA:', kycData);
+      
+      // Step 4: Submit KYC data
+      const result = await submitKYC(kycData).unwrap();
+      console.log('✅ KYC SUBMISSION SUCCESS:', result);
+      
+      if (result.success) {
+        toast.success('KYC submitted successfully! Your documents are under review.');
+        router.push('/dashboard');
+      } else {
+        toast.error(result.message || 'Failed to submit KYC. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('❌ KYC SUBMISSION ERROR:', error);
+      toast.error(error?.data?.message || 'Failed to submit KYC. Please try again.');
+      // Reset submission state on error so user can try again
+      hasSubmittedRef.current = false;
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmittingForm(false);
+    }
   };
 
   // Define validation schema
@@ -102,7 +203,8 @@ const KYCPage = () => {
       }
       
       if (errors.length > 0) {
-        alert('Please complete all required fields:\n\n' + errors.join('\n'));
+        // Don't show toast here - just return false for validation
+        // Toast will be shown by the calling function if needed
         return false;
       }
     }
@@ -110,20 +212,34 @@ const KYCPage = () => {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    console.log('🔄 NEXT BUTTON CLICKED - Step:', currentStep);
     if (validateCurrentStep() && currentStep < 2) {
+      console.log('✅ Moving to next step:', currentStep + 1);
       setCurrentStep(currentStep + 1);
+      // Scroll to top of the page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      console.log('❌ Cannot move to next step - validation failed or already at last step');
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    console.log('🔄 PREVIOUS BUTTON CLICKED - Step:', currentStep);
     if (currentStep > 1) {
+      console.log('✅ Moving to previous step:', currentStep - 1);
       setCurrentStep(currentStep - 1);
+      // Scroll to top of the page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  // File change handlers
-  const handleFileChange = (field: string) => (file: File | null, previewUrl: string | null) => {
+  // File change handlers - now stores File objects locally
+  const handleFileChange = (field: string) => (fileUrl: string | null, file: File | null) => {
     setFieldValue(field, file);
   };
 
@@ -154,13 +270,15 @@ const KYCPage = () => {
                 />
                 <p className="text-xs text-gray-500 mt-1">Format: ABCDE1234F (5 letters + 4 numbers + 1 letter)</p>
 
-                <FileUpload
+                <S3FileUpload
+                  key="pan-document"
                   label="PAN Document"
-                  id="panDocument"
-                  accept="image/*,.pdf"
+                  documentType="pan"
                   required
                   showPreview={true}
                   previewHeight="h-32"
+                  folderPath="kyc"
+                  value={values.panDocument}
                   onChange={handleFileChange('panDocument')}
                 />
               </div>
@@ -188,23 +306,27 @@ const KYCPage = () => {
                 <p className="text-xs text-gray-500 mt-1">12-digit Aadhar number</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FileUpload
+                  <S3FileUpload
+                    key="aadhar-front"
                     label="Aadhar Front"
-                    id="aadharFront"
-                    accept="image/*"
+                    documentType="aadhar_front"
                     required
                     showPreview={true}
                     previewHeight="h-24"
+                    folderPath="kyc"
+                    value={values.aadharFront}
                     onChange={handleFileChange('aadharFront')}
                   />
                   
-                  <FileUpload
+                  <S3FileUpload
+                    key="aadhar-back"
                     label="Aadhar Back"
-                    id="aadharBack"
-                    accept="image/*"
+                    documentType="aadhar_back"
                     required
                     showPreview={true}
                     previewHeight="h-24"
+                    folderPath="kyc"
+                    value={values.aadharBack}
                     onChange={handleFileChange('aadharBack')}
                   />
                 </div>
@@ -278,12 +400,14 @@ const KYCPage = () => {
                 />
                 <p className="text-xs text-gray-500 mt-1">15-character GST number (State + PAN + Entity + Check digit)</p>
 
-                <FileUpload
+                <S3FileUpload
+                  key="gst-certificate"
                   label="GST Certificate"
-                  id="gstDocument"
-                  accept="image/*,.pdf"
+                  documentType="gst"
                   showPreview={true}
                   previewHeight="h-32"
+                  folderPath="kyc"
+                  value={values.gstDocument}
                   onChange={handleFileChange('gstDocument')}
                 />
               </div>
@@ -333,12 +457,14 @@ const KYCPage = () => {
                   />
                 </div>
 
-                <FileUpload
+                <S3FileUpload
+                  key="bank-document"
                   label="Bank Statement/Cancelled Cheque"
-                  id="bankDocument"
-                  accept="image/*,.pdf"
+                  documentType="bank"
                   showPreview={true}
                   previewHeight="h-32"
+                  folderPath="kyc"
+                  value={values.bankDocument}
                   onChange={handleFileChange('bankDocument')}
                 />
               </div>
@@ -442,61 +568,114 @@ const KYCPage = () => {
       </div>
 
       {/* Form Content */}
-      <FormWrapper onSubmit={formik.handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        {renderStepContent()}
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
-          <button
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Previous
-          </button>
+      <FormWrapper 
+        onSubmit={(e) => {
+          e.preventDefault();
+          console.log('🔄 FORM SUBMIT TRIGGERED - Current Step:', currentStep);
+          console.log('🔄 FORM SUBMIT TRIGGERED - Event:', e);
           
-          {currentStep < 2 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className={`px-6 py-2 rounded-lg transition-colors ${
-                // Check if current step is valid
-                (currentStep === 1 && (
-                  !values.panNumber.trim() || 
-                  !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(values.panNumber) ||
-                  !values.panDocument ||
-                  !values.aadharNumber.trim() ||
-                  !/^[0-9]{12}$/.test(values.aadharNumber) ||
-                  !values.aadharFront ||
-                  !values.aadharBack
-                ))
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-primary text-white hover:bg-primary-light'
-              }`}
-              disabled={
-                currentStep === 1 && (
-                  !values.panNumber.trim() || 
-                  !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(values.panNumber) ||
-                  !values.panDocument ||
-                  !values.aadharNumber.trim() ||
-                  !/^[0-9]{12}$/.test(values.aadharNumber) ||
-                  !values.aadharFront ||
-                  !values.aadharBack
-                )
-              }
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Submit KYC
-            </button>
-          )}
-        </div>
+          // Only allow form submission on the final step
+          if (currentStep !== 2) {
+            console.log('🚫 BLOCKING FORM SUBMISSION - Not on final step');
+            return;
+          }
+          
+          if (!hasSubmittedRef.current && !isSubmittingRef.current && !isSubmittingForm && !isSubmitting) {
+            console.log('✅ ALLOWING FORM SUBMISSION');
+            formik.handleSubmit(e);
+          } else {
+            console.log('🚫 BLOCKING FORM SUBMISSION - Already submitted or in progress');
+          }
+        }} 
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
+      >
+        {renderStepContent()}
       </FormWrapper>
+
+      {/* Navigation Buttons - Outside Form */}
+      <div className="flex justify-between mt-8">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handlePrevious(e);
+          }}
+          disabled={currentStep === 1}
+          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Previous
+        </button>
+        
+        {currentStep < 2 ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleNext(e);
+            }}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              // Check if current step is valid
+              (currentStep === 1 && (
+                !values.panNumber.trim() || 
+                !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(values.panNumber) ||
+                !values.panDocument ||
+                !values.aadharNumber.trim() ||
+                !/^[0-9]{12}$/.test(values.aadharNumber) ||
+                !values.aadharFront ||
+                !values.aadharBack
+              ))
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary text-white hover:bg-primary-light'
+            }`}
+            disabled={
+              currentStep === 1 && (
+                !values.panNumber.trim() || 
+                !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(values.panNumber) ||
+                !values.panDocument ||
+                !values.aadharNumber.trim() ||
+                !/^[0-9]{12}$/.test(values.aadharNumber) ||
+                !values.aadharFront ||
+                !values.aadharBack
+              )
+            }
+          >
+            Next
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🔄 SUBMIT BUTTON CLICKED');
+              // Manually trigger form submission
+              const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+              const formElement = document.querySelector('form');
+              if (formElement) {
+                formElement.dispatchEvent(formEvent);
+              }
+            }}
+            disabled={hasSubmittedRef.current || isSubmitting || isSubmittingForm}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+          >
+            {hasSubmittedRef.current ? (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Submitted
+              </>
+            ) : isSubmitting || isSubmittingForm ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {isSubmittingForm ? 'Uploading files...' : 'Submitting KYC...'}
+              </>
+            ) : (
+              'Submit KYC'
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 };
