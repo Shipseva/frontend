@@ -33,7 +33,9 @@ export default function LoginPage() {
       try {
         const loginData = {
           identifier: values.emailOrPhone,
-          password: values.password
+          password: values.password,
+          "queryType": "userPanel"
+
         };
         
         const result = await loginUser(loginData).unwrap();

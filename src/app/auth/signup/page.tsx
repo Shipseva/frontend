@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2, Clock, RefreshCw } from "lucide-react";
 import { RegistrationData, UserRole } from "@/types/user";
-import { useRegisterUserMutation } from "@/store/api/authApi";
+import { useRegisterUserMutation, useVerifyEmailMutation, useResendOtpMutation } from "@/store/api/authApi";
 import Input from "@/components/forms/Input";
 import Select from "@/components/forms/Select";
 import Checkbox from "@/components/forms/Checkbox";
@@ -17,8 +17,22 @@ export default function SignupPage() {
   const [userRole, setUserRole] = useState<UserRole>("individual");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [countdown, setCountdown] = useState(0);
   const router = useRouter();
   const [registerUser, { isLoading, error }] = useRegisterUserMutation();
+  const [verifyEmail, { isLoading: isVerifying, error: verifyError }] = useVerifyEmailMutation();
+  const [resendOtp, { isLoading: isResending, error: resendError }] = useResendOtpMutation();
+
+  // Countdown timer effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const countryCodeOptions = [
     { label: "+1", value: "+1" },
@@ -71,7 +85,11 @@ export default function SignupPage() {
         
         const result = await registerUser(registrationData).unwrap();
         console.log('Registration successful:', result);
-        router.push("/dashboard");
+        
+        // Show OTP verification screen
+        setUserEmail(values.email);
+        setShowOtpVerification(true);
+        setCountdown(60); // 1 minute countdown
       } catch (err) {
         console.error('Registration failed:', err);
         // Error is handled by the error state from the mutation
@@ -87,6 +105,40 @@ export default function SignupPage() {
     }
   };
 
+  // OTP verification form
+  const otpForm = useForm({
+    initialValues: {
+      otp: "",
+    },
+    validationSchema: {
+      otp: Yup.string()
+        .required("OTP is required")
+        .length(6, "OTP must be 6 digits")
+        .matches(/^\d+$/, "OTP must contain only numbers"),
+    },
+    onSubmit: async (values) => {
+      try {
+        const result = await verifyEmail({
+          code: values.otp,
+          email: userEmail,
+        }).unwrap();
+        console.log('Email verified:', result);
+        router.push("/dashboard");
+      } catch (err) {
+        console.error('Email verification failed:', err);
+      }
+    },
+  });
+
+  const handleResendOtp = async () => {
+    try {
+      await resendOtp({ email: userEmail }).unwrap();
+      setCountdown(60); // Reset countdown
+    } catch (err) {
+      console.error('Resend OTP failed:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-accent flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -96,8 +148,109 @@ export default function SignupPage() {
           <p className="text-white/80">Join thousands of businesses shipping smarter</p>
         </div>
 
-        {/* Signup Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        {/* OTP Verification Screen */}
+        {showOtpVerification ? (
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
+              <p className="text-gray-600">
+                We've sent a 6-digit verification code to
+                <br />
+                <span className="font-medium text-primary">{userEmail}</span>
+              </p>
+            </div>
+
+            <form onSubmit={otpForm.handleSubmit} className="space-y-6">
+              {/* OTP Input */}
+              <div>
+                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Verification Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="otp"
+                  name="otp"
+                  type="text"
+                  maxLength={6}
+                  value={otpForm.values.otp}
+                  onChange={otpForm.handleChange}
+                  onBlur={otpForm.handleBlur}
+                  className={`block w-full px-4 py-3 border rounded-lg text-center text-2xl font-mono tracking-widest focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-colors ${
+                    otpForm.touched.otp && otpForm.errors.otp ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="000000"
+                />
+                {otpForm.touched.otp && otpForm.errors.otp && (
+                  <p className="mt-1 text-sm text-red-600">{otpForm.errors.otp}</p>
+                )}
+              </div>
+
+              {/* Error Display */}
+              {(verifyError || resendError) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-600 text-sm">
+                    {verifyError?.data?.message || resendError?.data?.message || "Verification failed. Please try again."}
+                  </p>
+                </div>
+              )}
+
+              {/* Verify Button */}
+              <button
+                type="submit"
+                disabled={isVerifying}
+                className="w-full bg-gradient-to-r from-primary to-accent text-white py-3 px-4 rounded-lg font-medium hover:from-primary-light hover:to-accent-light focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
+              >
+                {isVerifying ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Verify Email
+                    <Check className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              {/* Resend OTP */}
+              <div className="text-center">
+                <p className="text-gray-600 text-sm mb-2">
+                  Didn't receive the code?
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={countdown > 0 || isResending}
+                  className="text-primary hover:text-primary-light font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+                >
+                  {isResending ? (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  {countdown > 0 ? `Resend in ${countdown}s` : "Resend OTP"}
+                </button>
+              </div>
+
+              {/* Back to Signup */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpVerification(false);
+                    setUserEmail("");
+                    setCountdown(0);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                >
+                  ← Back to signup
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          /* Signup Form */
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h2>
             <p className="text-gray-600">Get started with your logistics management journey</p>
@@ -344,6 +497,7 @@ export default function SignupPage() {
             </p>
           </div>
         </div>
+        )}
 
         {/* Footer */}
         <div className="text-center mt-8">

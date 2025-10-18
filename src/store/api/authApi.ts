@@ -34,6 +34,20 @@ export const authApi = createApi({
         body: data,
       }),
     }),
+    verifyEmail: builder.mutation<{ message: string }, { code: string; email: string }>({
+      query: (data) => ({
+        url: "verify-email",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    resendOtp: builder.mutation<{ message: string }, { email: string }>({
+      query: (data) => ({
+        url: "resend-otp",
+        method: "POST",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -41,5 +55,7 @@ export const {
   useLoginUserMutation, 
   useRegisterUserMutation,
   useForgotPasswordMutation,
-  useResetPasswordMutation
+  useResetPasswordMutation,
+  useVerifyEmailMutation,
+  useResendOtpMutation
 } = authApi;
