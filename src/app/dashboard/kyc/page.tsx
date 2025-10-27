@@ -102,13 +102,13 @@ const KYCPage = () => {
           aadharNumber: formValues.aadharNumber,
           aadharFront: uploadedUrls.aadharFront || '',
           aadharBack: uploadedUrls.aadharBack || '',
-          isVerified: false,
+          documentStatus: "pending",
         },
         pan: {
           panNumber: formValues.panNumber,
           panFront: uploadedUrls.panDocument || '',
           panBack: uploadedUrls.panDocument || '', // Assuming single PAN document
-          isVerified: false,
+          documentStatus: "pending",
         },
         ifsc: formValues.bankIfsc || undefined,
         accountNumber: formValues.bankAccountNumber || undefined,
