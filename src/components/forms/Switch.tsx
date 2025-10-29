@@ -1,6 +1,6 @@
 import React from "react";
 
-interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {}
+type SwitchProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 const Switch: React.FC<SwitchProps> = ({ ...props }) => {
   return (
