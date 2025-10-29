@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { Upload, CheckCircle, X, AlertCircle, Loader2 } from 'lucide-react';
 import { 
   FileUploadState, 
@@ -97,14 +98,14 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
         uploadProgress: 0,
       }));
     }
-  }, [value, showPreview]);
+  }, [value, showPreview, uploadState.file]);
 
   // Handle controlled upload when shouldUpload becomes true
   React.useEffect(() => {
     if (shouldUpload && uploadState.file && !uploadState.uploadedUrl && !uploadState.isUploading) {
       handleUpload();
     }
-  }, [shouldUpload, uploadState.file, uploadState.uploadedUrl, uploadState.isUploading]);
+  }, [shouldUpload, uploadState.file, uploadState.uploadedUrl, uploadState.isUploading, handleUpload]);
 
   // Upload function
   const handleUpload = useCallback(async () => {
@@ -282,9 +283,11 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
       return (
         <div className="space-y-3">
           <div className="relative inline-block">
-            <img
+            <Image
               src={uploadState.previewUrl}
               alt="Preview"
+              width={300}
+              height={128}
               className={`max-w-full ${previewHeight} object-contain border border-gray-200 rounded-lg`}
             />
             <button
@@ -319,9 +322,11 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
       return (
         <div className="space-y-3">
           <div className="relative inline-block">
-            <img
+            <Image
               src={uploadState.previewUrl}
               alt="Preview"
+              width={300}
+              height={128}
               className={`max-w-full ${previewHeight} object-contain border border-gray-200 rounded-lg`}
             />
             <button
@@ -357,9 +362,11 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
         <div className="space-y-4">
           {uploadState.previewUrl && (
             <div className="relative inline-block">
-              <img
+              <Image
                 src={uploadState.previewUrl}
                 alt="Preview"
+                width={300}
+                height={128}
                 className={`max-w-full ${previewHeight} object-contain border border-gray-200 rounded-lg opacity-75`}
               />
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
@@ -388,9 +395,11 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
         <div className="space-y-3">
           {uploadState.previewUrl && (
             <div className="relative inline-block">
-              <img
+              <Image
                 src={uploadState.previewUrl}
                 alt="Preview"
+                width={300}
+                height={128}
                 className={`max-w-full ${previewHeight} object-contain border border-gray-200 rounded-lg opacity-75`}
               />
               <div className="absolute inset-0 bg-red-100 bg-opacity-75 rounded-lg flex items-center justify-center">

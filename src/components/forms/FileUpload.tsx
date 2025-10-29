@@ -75,9 +75,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
         {previewUrl ? (
           <div className="space-y-3">
             <div className="relative inline-block">
-              <img
+              <Image
                 src={previewUrl}
                 alt="Preview"
+                width={300}
+                height={128}
                 className={`max-w-full ${previewHeight} object-contain border border-gray-200 rounded-lg`}
               />
               <button

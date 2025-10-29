@@ -19,3 +19,4 @@ export default function TrackPage({ params }: TrackPageProps) {
     </div>
   );
 }
+

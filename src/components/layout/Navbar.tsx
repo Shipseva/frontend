@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLogoutUserMutation } from "@/store/api/userApi";
 import { 
   Menu, 
@@ -13,10 +12,7 @@ import {
   Bell,
   Search,
   Package,
-  Calculator,
-  MapPin,
-  Ticket,
-  History
+  Calculator
 } from "lucide-react";
 
 interface NavbarProps {
