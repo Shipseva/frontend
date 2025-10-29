@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Mail, ArrowRight, ArrowLeft, CheckCircle, Phone } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -14,7 +13,6 @@ export default function ForgotPasswordPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +62,7 @@ export default function ForgotPasswordPage() {
                 {resetMethod === "email" ? "Check Your Email" : "Check Your Phone"}
               </h2>
               <p className="text-gray-600">
-                We've sent a password reset {resetMethod === "email" ? "link" : "code"} to{" "}
+                We&apos;ve sent a password reset {resetMethod === "email" ? "link" : "code"} to{" "}
                 <strong>
                   {resetMethod === "email" 
                     ? formData.email 
@@ -76,7 +74,7 @@ export default function ForgotPasswordPage() {
 
             <div className="space-y-4">
               <p className="text-sm text-gray-500">
-                Didn't receive the {resetMethod === "email" ? "email" : "SMS"}? 
+                Didn&apos;t receive the {resetMethod === "email" ? "email" : "SMS"}? 
                 {resetMethod === "email" ? " Check your spam folder or try again." : " Check your messages or try again."}
               </p>
               
@@ -125,7 +123,7 @@ export default function ForgotPasswordPage() {
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Forgot Password?</h2>
             <p className="text-gray-600">
-              No worries! Enter your {resetMethod === "email" ? "email address" : "phone number"} and we'll send you a {resetMethod === "email" ? "link" : "code"} to reset your password.
+              No worries! Enter your {resetMethod === "email" ? "email address" : "phone number"} and we&apos;ll send you a {resetMethod === "email" ? "link" : "code"} to reset your password.
             </p>
           </div>
 

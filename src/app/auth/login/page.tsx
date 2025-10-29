@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { Eye, EyeOff, User, Lock, ArrowRight } from "lucide-react";
 import { useLoginUserMutation } from "@/store/api/authApi";
-import { setUser, clearRedirectUrl } from "@/store/slices/userSlice";
+import { clearRedirectUrl } from "@/store/slices/userSlice";
 import { RootState } from "@/store";
 import Input from "@/components/forms/Input";
 import { useForm } from "@/components/forms/useForm";
 import { emailOrPhoneValidator, requiredValidator } from "@/components/forms/validators";
-import * as Yup from "yup";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -175,7 +174,7 @@ export default function LoginPage() {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/auth/signup"
                 className="text-primary hover:text-primary-light font-medium transition-colors"
