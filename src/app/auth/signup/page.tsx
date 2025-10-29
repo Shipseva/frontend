@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2, Clock, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, Building2, RefreshCw } from "lucide-react";
 import { RegistrationData, UserRole } from "@/types/user";
 import { useRegisterUserMutation, useVerifyEmailMutation, useResendOtpMutation } from "@/store/api/authApi";
 import Input from "@/components/forms/Input";
@@ -157,7 +157,7 @@ export default function SignupPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h2>
               <p className="text-gray-600">
-                We've sent a 6-digit verification code to
+                We&apos;ve sent a 6-digit verification code to
                 <br />
                 <span className="font-medium text-primary">{userEmail}</span>
               </p>
@@ -215,7 +215,7 @@ export default function SignupPage() {
               {/* Resend OTP */}
               <div className="text-center">
                 <p className="text-gray-600 text-sm mb-2">
-                  Didn't receive the code?
+                  Didn&apos;t receive the code?
                 </p>
                 <button
                   type="button"

@@ -37,7 +37,7 @@ export default function LoginPage() {
 
         };
         
-        const result = await loginUser(loginData).unwrap();
+        await loginUser(loginData).unwrap();
         // Token is automatically set as HTTP-only cookie by the server
         // AuthWrapper will handle getUser call with the cookie
         

@@ -5,14 +5,8 @@ import {
   Package, 
   MapPin, 
   User, 
-  Phone, 
-  Mail, 
-  Calendar,
   Truck,
-  Weight,
-  DollarSign,
   ArrowLeft,
-  Plus,
   Save
 } from "lucide-react";
 import Link from "next/link";

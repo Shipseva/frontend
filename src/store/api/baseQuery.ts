@@ -35,7 +35,7 @@ export const createBaseQuery = (baseUrl: string, excludeAuthApis = false) => {
 export const createBaseQueryWithToasts = (baseUrl: string, excludeAuthApis = false) => {
   const baseQuery = createBaseQuery(baseUrl, excludeAuthApis);
   
-  return async (args: any, api: any, extraOptions: any) => {
+  return async (args: unknown, api: unknown, extraOptions: unknown) => {
     const result = await baseQuery(args, api, extraOptions);
     
     // Show toasts based on result

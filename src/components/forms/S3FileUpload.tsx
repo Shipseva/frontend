@@ -10,7 +10,6 @@ import {
   createPreviewUrl, 
   revokePreviewUrl, 
   formatFileSize,
-  getDefaultValidationOptions,
   validateFile
 } from '@/lib/upload';
 import toast from 'react-hot-toast';
@@ -136,8 +135,8 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
       onUploadComplete?.(fileUrl);
       toast.success('File uploaded successfully!');
 
-    } catch (error: any) {
-      const errorMessage = error.message || 'Upload failed';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Upload failed';
       setUploadState(prev => ({
         ...prev,
         isUploading: false,

@@ -1,5 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
+import { KYCWarningToast } from '@/components/KYCWarningToast';
 
 // Toast configuration
 const toastConfig = {
@@ -56,7 +57,7 @@ export const showWarningToast = (message: string) => {
 };
 
 // Get error message from API error
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: unknown): string => {
   if (typeof error === 'string') {
     return error;
   }
@@ -77,7 +78,7 @@ export const getErrorMessage = (error: any): string => {
 };
 
 // Get success message from API response
-export const getSuccessMessage = (response: any, defaultMessage: string): string => {
+export const getSuccessMessage = (response: unknown, defaultMessage: string): string => {
   if (response?.message) {
     return response.message;
   }
@@ -93,8 +94,6 @@ export const getSuccessMessage = (response: any, defaultMessage: string): string
 export const showKYCWarningToast = () => {
   const toastId = toast.custom(
     (t) => {
-      // Dynamically import the React component
-      const { KYCWarningToast } = require('@/components/KYCWarningToast');
       return React.createElement(KYCWarningToast, { toast: t });
     },
     {

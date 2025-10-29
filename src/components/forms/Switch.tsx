@@ -1,8 +1,8 @@
 import React from "react";
 
-interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {}
 
-const Switch: React.FC<SwitchProps> = ({ className, ...props }) => {
+const Switch: React.FC<SwitchProps> = ({ ...props }) => {
   return (
     <label className="inline-flex relative items-center cursor-pointer">
       <input type="checkbox" className="sr-only peer" {...props} />

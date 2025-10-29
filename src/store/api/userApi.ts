@@ -43,7 +43,7 @@ export const userApi = createApi({
             try {
               await queryFulfilled;
               dispatch(logout());
-            } catch (error) {
+            } catch {
               dispatch(logout());
             }
           },

@@ -286,7 +286,7 @@ export default function RateCalculatorPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {Object.entries(calculatedRates).map(([service, rate]: [string, any]) => (
+              {Object.entries(calculatedRates).map(([service, rate]: [string, { price: number; deliveryTime: string; description: string }]) => (
                 <div
                   key={service}
                   className={`p-4 rounded-lg border-2 transition-all cursor-pointer hover:shadow-md ${

@@ -31,7 +31,6 @@ interface NavbarProps {
 export default function Navbar({ user, currentPath }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const router = useRouter();
   const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
 
   const navigation = [
@@ -40,14 +39,6 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
     { name: "Shipments", href: "/dashboard/shipments", icon: Package },
     { name: "Payments", href: "/dashboard/payments", icon: Calculator },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
-  ];
-
-  const tools = [
-    { name: "Order", href: "/dashboard/tools/order", icon: Package },
-    { name: "Rate Calculator", href: "/dashboard/tools/rate-calculator", icon: Calculator },
-    { name: "Zone Wise Rate", href: "/dashboard/tools/zone-rates", icon: MapPin },
-    { name: "Ticketing", href: "/dashboard/tools/ticketing", icon: Ticket },
-    { name: "Orders History", href: "/dashboard/tools/orders-history", icon: History },
   ];
 
   const handleLogout = async () => {

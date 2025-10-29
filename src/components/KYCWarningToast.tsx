@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface KYCWarningToastProps {
-  toast: any;
+  toast: { id: string; dismiss: () => void };
 }
 
 export const KYCWarningToast: React.FC<KYCWarningToastProps> = ({ toast: toastInstance }) => {

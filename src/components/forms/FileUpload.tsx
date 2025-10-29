@@ -17,7 +17,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
   showPreview = false, 
   previewHeight = "h-32",
   onChange,
-  className, 
   ...props 
 }) => {
   const [fileName, setFileName] = useState("");

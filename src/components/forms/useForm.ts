@@ -3,7 +3,7 @@ import * as Yup from "yup";
 
 interface UseFormProps<T> extends FormikConfig<T> {
   initialValues: T;
-  validationSchema: Record<keyof T, any>; // Yup schema for each field
+  validationSchema: Record<keyof T, Yup.Schema>; // Yup schema for each field
   onSubmit: (values: T) => void | Promise<void>;
 }
 

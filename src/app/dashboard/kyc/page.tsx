@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2, Loader2 } from 'lucide-react';
@@ -132,9 +132,10 @@ const KYCPage = () => {
       } else {
         toast.error(result.message || 'Failed to submit KYC. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ KYC SUBMISSION ERROR:', error);
-      toast.error(error?.data?.message || 'Failed to submit KYC. Please try again.');
+      const errorMessage = (error as { data?: { message?: string } })?.data?.message || 'Failed to submit KYC. Please try again.';
+      toast.error(errorMessage);
       // Reset submission state on error so user can try again
       hasSubmittedRef.current = false;
     } finally {
@@ -165,7 +166,7 @@ const KYCPage = () => {
     onSubmit: handleSubmit,
   });
 
-  const { values, errors, touched, setFieldValue, setFieldError } = formik;
+  const { values, errors, touched, setFieldValue } = formik;
 
   const steps = [
     { id: 1, title: 'PAN & Aadhar', icon: FileText },
