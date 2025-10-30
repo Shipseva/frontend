@@ -128,7 +128,7 @@ const KYCPage = () => {
       
       if (result.success) {
         toast.success('KYC submitted successfully! Your documents are under review.');
-        router.push('/dashboard');
+        router.push('/');
       } else {
         toast.error(result.message || 'Failed to submit KYC. Please try again.');
       }

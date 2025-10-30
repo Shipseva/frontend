@@ -105,7 +105,7 @@ const S3FileUpload: React.FC<S3FileUploadProps> = ({
     if (shouldUpload && uploadState.file && !uploadState.uploadedUrl && !uploadState.isUploading) {
       handleUpload();
     }
-  }, [shouldUpload, uploadState.file, uploadState.uploadedUrl, uploadState.isUploading, handleUpload]);
+  }, [shouldUpload, uploadState.file, uploadState.uploadedUrl, uploadState.isUploading]);
 
   // Upload function
   const handleUpload = useCallback(async () => {

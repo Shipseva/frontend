@@ -17,10 +17,12 @@ export const userApi = createApi({
           console.log('✅ getUser successful:', data);
           dispatch(setUser({ user: data, token: 'cookie' }));
           
-          // Check KYC verification status
-          if (!data.isVerified) {
-            console.log('⚠️ User KYC not verified - showing warning toast');
-            // Show KYC warning toast with action buttons
+          // Show KYC warning only when explicitly rejected
+          const kycStatus = (data as any).status; // optional from backend
+          const shouldShowKycWarning = kycStatus === 'rejected';
+
+          if (shouldShowKycWarning) {
+            console.log('⚠️ User KYC rejected - showing warning toast');
             if (typeof window !== 'undefined') {
               import('@/utils/toast').then(({ showKYCWarningToast }) => {
                 showKYCWarningToast();
