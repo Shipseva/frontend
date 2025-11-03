@@ -39,6 +39,12 @@ const KYCPage = () => {
     kycDocument.pan.documentStatus === 'rejected'
   );
   
+  // Check if all documents are pending (no rejected documents)
+  const allDocumentsPending = kycDocument && 
+    !hasRejectedDocuments &&
+    kycDocument.aadhar.documentStatus === 'pending' &&
+    kycDocument.pan.documentStatus === 'pending';
+  
   const rejectedDocumentsList: string[] = [];
   const rejectedDocumentsMap: { [key: string]: boolean } = {};
   
@@ -619,10 +625,10 @@ const KYCPage = () => {
     );
   }
 
-  // If documents exist and no rejected documents, AND status is approved, show status message
-  // If status is pending but no rejected documents, also show status (waiting for review)
+  // If documents exist and all documents are pending (not rejected), show status message
+  // If documents exist and no rejected documents, show status message
   // If status is pending but has rejected documents, show form to update
-  if (hasDocuments && kycDocument && !hasRejectedDocuments && kycDocument.status !== 'rejected') {
+  if (hasDocuments && kycDocument && (allDocumentsPending || (!hasRejectedDocuments && kycDocument.status !== 'rejected'))) {
     const isPending = kycDocument.status === 'pending';
     const isApproved = kycDocument.status === 'approved';
 
@@ -675,7 +681,9 @@ const KYCPage = () => {
                 'text-yellow-700'
               }`}>
                 {isPending 
-                  ? 'Your KYC verification is currently under review. Our team is processing your documents. Please wait for approval.'
+                  ? allDocumentsPending
+                    ? 'Your KYC verification is currently under review. All your documents are being processed by our team. Please wait for approval.'
+                    : 'Your KYC verification is currently under review. Our team is processing your documents. Please wait for approval.'
                   : isApproved
                   ? 'Your KYC verification has been successfully approved. You now have access to all features.'
                   : 'Your KYC verification has been rejected. Please update your documents and resubmit.'}

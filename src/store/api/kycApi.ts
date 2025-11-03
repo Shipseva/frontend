@@ -113,7 +113,7 @@ export const kycApi = createApi({
       providesTags: ['KYC'],
     }),
     getUserDocuments: builder.query<UserKYCDocument[], void>({
-      query: () => '/kyc/userDocuments',
+      query: () => '/userDocuments',
       providesTags: ['KYC'],
     }),
     updateKYC: builder.mutation<UpdateKYCResponse, { id: string; data: UpdateKYCData }>({
