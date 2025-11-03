@@ -1,10 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { LoginCredentials, RegistrationData, AuthResponse } from "@/types/user";
 import { createBaseQuery } from "./baseQuery";
+import { getApiUrl } from "@/config/apiConfig";
 
 export const authApi = createApi({
   reducerPath: "authApi",
-  baseQuery: createBaseQuery("http://localhost/auth", true), // excludeAuthApis = true, no toasts
+  baseQuery: createBaseQuery(getApiUrl("AUTH"), true), // excludeAuthApis = true, no toasts
   endpoints: (builder) => ({
     loginUser: builder.mutation<AuthResponse, LoginCredentials>({
       query: (credentials) => ({

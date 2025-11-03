@@ -2,10 +2,17 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { UserProfile } from "@/types/user";
 import { logout, setUser } from "@/store/slices/userSlice";
 import { createBaseQueryWithToasts } from "./baseQuery";
+import { getApiUrl } from "@/config/apiConfig";
+
+export enum Status {
+  PENDING = 'pending',
+  VERIFIED = 'verified',
+  REJECTED = 'rejected',
+}
 
 export const userApi = createApi({
   reducerPath: "userApi",
-  baseQuery: createBaseQueryWithToasts("http://localhost/users"),
+  baseQuery: createBaseQueryWithToasts(getApiUrl("USERS")),
   tagTypes: ["User"],
   endpoints: (builder) => ({
     getUser: builder.query<UserProfile, void>({
@@ -17,15 +24,15 @@ export const userApi = createApi({
           console.log('✅ getUser successful:', data);
           dispatch(setUser({ user: data, token: 'cookie' }));
           
-          // Show KYC warning only when explicitly rejected
-          const kycStatus = (data as any).status; // optional from backend
-          const shouldShowKycWarning = kycStatus === 'rejected';
+          // Show KYC warning for pending or rejected status
+          const kycStatus = (data as any).status as Status | undefined; // optional from backend
+          const shouldShowKycWarning = kycStatus === Status.PENDING || kycStatus === Status.REJECTED;
 
           if (shouldShowKycWarning) {
-            console.log('⚠️ User KYC rejected - showing warning toast');
+            console.log(`⚠️ User KYC ${kycStatus} - showing warning toast`);
             if (typeof window !== 'undefined') {
               import('@/utils/toast').then(({ showKYCWarningToast }) => {
-                showKYCWarningToast();
+                showKYCWarningToast(kycStatus === Status.PENDING ? 'pending' : 'rejected');
               });
             }
           }

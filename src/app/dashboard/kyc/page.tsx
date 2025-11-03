@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2, Loader2, Clock } from 'lucide-react';
 import { RootState } from '@/store';
 import Input from '@/components/forms/Input';
 import S3FileUpload from '@/components/forms/S3FileUpload';
 import FormWrapper from '@/components/forms/FormWrapper';
 import { useForm } from '@/components/forms/useForm';
 import { panValidator, aadharValidator, gstValidator, ifscValidator, accountNumberValidator } from '@/components/forms/validators';
-import { useSubmitKYCMutation, KYCSubmissionData } from '@/store/api/kycApi';
+import { useSubmitKYCMutation, useGetUserDocumentsQuery, useUpdateKYCMutation, KYCSubmissionData, UserKYCDocument, UpdateKYCData } from '@/store/api/kycApi';
 import { uploadFile } from '@/lib/upload';
 import toast from 'react-hot-toast';
 import * as Yup from 'yup';
+import { Status } from '@/store/api/userApi';
 
 const KYCPage = () => {
   const router = useRouter();
@@ -25,25 +26,66 @@ const KYCPage = () => {
   
   // API hooks
   const [submitKYC, { isLoading: isSubmitting }] = useSubmitKYCMutation();
+  const [updateKYC, { isLoading: isUpdating }] = useUpdateKYCMutation();
+  const { data: documents, isLoading: isLoadingDocuments } = useGetUserDocumentsQuery();
   
-  // Define initial values - now storing File objects locally
-  const initialValues = {
-    // PAN Card (Mandatory)
-    panNumber: '',
-    panDocument: null as File | null,
-    // Aadhar Card (Mandatory)
-    aadharNumber: '',
-    aadharFront: null as File | null,
-    aadharBack: null as File | null,
-    // GST (Optional)
-    gstNumber: '',
-    gstDocument: null as File | null,
-    // Bank Details (Optional)
-    bankAccountNumber: '',
-    bankName: '',
-    bankIfsc: '',
-    bankDocument: null as File | null,
+  // Check if KYC documents exist
+  const hasDocuments = documents && documents.length > 0;
+  const kycDocument = hasDocuments ? documents[0] : null;
+  
+  // Check if any document is rejected (even if overall status is pending)
+  const hasRejectedDocuments = kycDocument && (
+    kycDocument.aadhar.documentStatus === 'rejected' ||
+    kycDocument.pan.documentStatus === 'rejected'
+  );
+  
+  const rejectedDocumentsList: string[] = [];
+  const rejectedDocumentsMap: { [key: string]: boolean } = {};
+  
+  if (kycDocument) {
+    if (kycDocument.aadhar.documentStatus === 'rejected') {
+      rejectedDocumentsList.push('Aadhar Card');
+      rejectedDocumentsMap.aadhar = true;
+    }
+    if (kycDocument.pan.documentStatus === 'rejected') {
+      rejectedDocumentsList.push('PAN Card');
+      rejectedDocumentsMap.pan = true;
+    }
+  }
+  
+  // Prefill initial values from existing document if available
+  const getInitialValues = () => {
+    if (hasRejectedDocuments && kycDocument) {
+      return {
+        panNumber: kycDocument.pan.panNumber || '',
+        panDocument: null as File | null,
+        aadharNumber: kycDocument.aadhar.aadharNumber || '',
+        aadharFront: null as File | null,
+        aadharBack: null as File | null,
+        gstNumber: kycDocument.gstNumber || '',
+        gstDocument: null as File | null,
+        bankAccountNumber: kycDocument.accountNumber || '',
+        bankName: kycDocument.bankName || '',
+        bankIfsc: kycDocument.ifsc || '',
+        bankDocument: null as File | null,
+      };
+    }
+    return {
+      panNumber: '',
+      panDocument: null as File | null,
+      aadharNumber: '',
+      aadharFront: null as File | null,
+      aadharBack: null as File | null,
+      gstNumber: '',
+      gstDocument: null as File | null,
+      bankAccountNumber: '',
+      bankName: '',
+      bankIfsc: '',
+      bankDocument: null as File | null,
+    };
   };
+  
+  const initialValues = getInitialValues();
 
   const handleSubmit = async (formValues: typeof initialValues) => {
     // Prevent multiple submissions
@@ -96,41 +138,106 @@ const KYCPage = () => {
       
       console.log('📋 UPLOADED URLS:', uploadedUrls);
       
-      // Step 3: Prepare KYC submission data with uploaded file URLs
-      const kycData: KYCSubmissionData = {
-        aadhar: {
-          aadharNumber: formValues.aadharNumber,
-          aadharFront: uploadedUrls.aadharFront || '',
-          aadharBack: uploadedUrls.aadharBack || '',
-          documentStatus: "pending",
-        },
-        pan: {
-          panNumber: formValues.panNumber,
-          panFront: uploadedUrls.panDocument || '',
-          panBack: uploadedUrls.panDocument || '', // Assuming single PAN document
-          documentStatus: "pending",
-        },
-        ifsc: formValues.bankIfsc || undefined,
-        accountNumber: formValues.bankAccountNumber || undefined,
-        accountHolderName: user?.name || undefined,
-        bankName: formValues.bankName || undefined,
-        branchName: undefined,
-        gstNumber: formValues.gstNumber || undefined,
-        gstCertificate: uploadedUrls.gstDocument || undefined,
-        businessType: 'individual',
-      };
-      
-      console.log('🚀 SUBMITTING KYC DATA:', kycData);
-      
-      // Step 4: Submit KYC data
-      const result = await submitKYC(kycData).unwrap();
-      console.log('✅ KYC SUBMISSION SUCCESS:', result);
-      
-      if (result.success) {
-        toast.success('KYC submitted successfully! Your documents are under review.');
-        router.push('/');
+      // Step 3: Check if we're updating existing KYC or creating new one
+      if (hasRejectedDocuments && kycDocument) {
+        // Update existing KYC - only send changed fields
+        const updateData: UpdateKYCData = {};
+        
+        // Update aadhar if rejected or if new files are uploaded or if number is changed
+        const shouldUpdateAadhar = rejectedDocumentsMap.aadhar || 
+          uploadedUrls.aadharFront || 
+          uploadedUrls.aadharBack ||
+          (formValues.aadharNumber && formValues.aadharNumber !== kycDocument.aadhar.aadharNumber);
+        
+        if (shouldUpdateAadhar) {
+          updateData.aadhar = {
+            ...(formValues.aadharNumber && { aadharNumber: formValues.aadharNumber }),
+            ...(uploadedUrls.aadharFront && { aadharFront: uploadedUrls.aadharFront }),
+            ...(uploadedUrls.aadharBack && { aadharBack: uploadedUrls.aadharBack }),
+            documentStatus: 'pending',
+          };
+        }
+        
+        // Update pan if rejected or if new file is uploaded or if number is changed
+        const shouldUpdatePan = rejectedDocumentsMap.pan || 
+          uploadedUrls.panDocument ||
+          (formValues.panNumber && formValues.panNumber !== kycDocument.pan.panNumber);
+        
+        if (shouldUpdatePan) {
+          updateData.pan = {
+            ...(formValues.panNumber && { panNumber: formValues.panNumber }),
+            ...(uploadedUrls.panDocument && { 
+              panFront: uploadedUrls.panDocument,
+              panBack: uploadedUrls.panDocument 
+            }),
+            documentStatus: 'pending',
+          };
+        }
+        
+        // Update optional fields if provided
+        if (formValues.bankIfsc || formValues.bankAccountNumber || formValues.bankName) {
+          updateData.ifsc = formValues.bankIfsc || kycDocument.ifsc;
+          updateData.accountNumber = formValues.bankAccountNumber || kycDocument.accountNumber;
+          updateData.bankName = formValues.bankName || kycDocument.bankName;
+          updateData.accountHolderName = user?.name || kycDocument.accountHolderName;
+        }
+        
+        if (formValues.gstNumber || uploadedUrls.gstDocument) {
+          updateData.gstNumber = formValues.gstNumber || kycDocument.gstNumber;
+          if (uploadedUrls.gstDocument) {
+            updateData.gstCertificate = uploadedUrls.gstDocument;
+          }
+        }
+        
+        console.log('🚀 UPDATING KYC DATA:', updateData);
+        
+        // Step 4: Update KYC data
+        const result = await updateKYC({ id: kycDocument.id, data: updateData }).unwrap();
+        console.log('✅ KYC UPDATE SUCCESS:', result);
+        
+        if (result.success) {
+          toast.success('KYC updated successfully! Your documents are under review.');
+          router.push('/dashboard');
+        } else {
+          toast.error(result.message || 'Failed to update KYC. Please try again.');
+        }
       } else {
-        toast.error(result.message || 'Failed to submit KYC. Please try again.');
+        // Create new KYC submission
+        const kycData: KYCSubmissionData = {
+          aadhar: {
+            aadharNumber: formValues.aadharNumber,
+            aadharFront: uploadedUrls.aadharFront || '',
+            aadharBack: uploadedUrls.aadharBack || '',
+            isVerified: false,
+          },
+          pan: {
+            panNumber: formValues.panNumber,
+            panFront: uploadedUrls.panDocument || '',
+            panBack: uploadedUrls.panDocument || '', // Assuming single PAN document
+            isVerified: false,
+          },
+          ifsc: formValues.bankIfsc || undefined,
+          accountNumber: formValues.bankAccountNumber || undefined,
+          accountHolderName: user?.name || undefined,
+          bankName: formValues.bankName || undefined,
+          branchName: undefined,
+          gstNumber: formValues.gstNumber || undefined,
+          gstCertificate: uploadedUrls.gstDocument || undefined,
+          businessType: 'individual',
+        };
+        
+        console.log('🚀 SUBMITTING KYC DATA:', kycData);
+        
+        // Step 4: Submit KYC data
+        const result = await submitKYC(kycData).unwrap();
+        console.log('✅ KYC SUBMISSION SUCCESS:', result);
+        
+        if (result.success) {
+          toast.success('KYC submitted successfully! Your documents are under review.');
+          router.push('/dashboard');
+        } else {
+          toast.error(result.message || 'Failed to submit KYC. Please try again.');
+        }
       }
     } catch (error: unknown) {
       console.error('❌ KYC SUBMISSION ERROR:', error);
@@ -491,6 +598,101 @@ const KYCPage = () => {
     }
   };
 
+  // Show toast for rejected documents
+  useEffect(() => {
+    if (hasRejectedDocuments && rejectedDocumentsList.length > 0) {
+      toast.error(
+        `The following documents need to be updated: ${rejectedDocumentsList.join(', ')}`,
+        { duration: 6000 }
+      );
+    }
+  }, [hasRejectedDocuments, rejectedDocumentsList]);
+
+  // If documents exist, show status message instead of form (unless rejected)
+  if (isLoadingDocuments) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // If documents exist and no rejected documents, AND status is approved, show status message
+  // If status is pending but no rejected documents, also show status (waiting for review)
+  // If status is pending but has rejected documents, show form to update
+  if (hasDocuments && kycDocument && !hasRejectedDocuments && kycDocument.status !== 'rejected') {
+    const isPending = kycDocument.status === 'pending';
+    const isApproved = kycDocument.status === 'approved';
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">KYC Verification</h1>
+          <p className="text-gray-600 mt-2">View your KYC verification status</p>
+        </div>
+
+        <div className={`bg-white rounded-xl shadow-sm border p-8 ${
+          isPending ? 'border-blue-200 bg-blue-50' :
+          isApproved ? 'border-green-200 bg-green-50' :
+          'border-yellow-200 bg-yellow-50'
+        }`}>
+          <div className="flex items-start">
+            <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+              isPending ? 'bg-blue-100' :
+              isApproved ? 'bg-green-100' :
+              'bg-yellow-100'
+            }`}>
+              {isPending ? (
+                <Clock className="w-6 h-6 text-blue-600" />
+              ) : isApproved ? (
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-yellow-600" />
+              )}
+            </div>
+            <div className="ml-4 flex-1">
+              <h2 className={`text-xl font-semibold ${
+                isPending ? 'text-blue-900' :
+                isApproved ? 'text-green-900' :
+                'text-yellow-900'
+              }`}>
+                {isPending ? 'KYC Verification Pending' :
+                 isApproved ? 'KYC Verification Approved' :
+                 'KYC Verification Rejected'}
+              </h2>
+              <p className={`mt-2 text-sm ${
+                isPending ? 'text-blue-700' :
+                isApproved ? 'text-green-700' :
+                'text-yellow-700'
+              }`}>
+                {isPending 
+                  ? 'Your KYC verification is currently under review. Our team is processing your documents. Please wait for approval.'
+                  : isApproved
+                  ? 'Your KYC verification has been successfully approved. You now have access to all features.'
+                  : 'Your KYC verification has been rejected. Please update your documents and resubmit.'}
+              </p>
+              <div className="mt-4 text-xs text-gray-600">
+                Submitted: {new Date(kycDocument.createdAt).toLocaleDateString()}
+                {kycDocument.updatedAt && kycDocument.updatedAt !== kycDocument.createdAt && (
+                  <span className="ml-4">Updated: {new Date(kycDocument.updatedAt).toLocaleDateString()}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -504,6 +706,32 @@ const KYCPage = () => {
         </button>
         <h1 className="text-3xl font-bold text-gray-900">KYC Verification</h1>
         <p className="text-gray-600 mt-2">Complete your identity verification to access all features</p>
+        
+        {/* Rejected Documents Warning */}
+        {hasRejectedDocuments && rejectedDocumentsList.length > 0 && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-red-900 mb-1">
+                  Documents Requiring Update
+                </h3>
+                <p className="text-sm text-red-700">
+                  {rejectedDocumentsList.length === 1 
+                    ? `Your ${rejectedDocumentsList[0]} has been rejected and needs to be updated.`
+                    : `The following documents have been rejected and need to be updated: ${rejectedDocumentsList.join(' and ')}.`
+                  }
+                  {' '}Please review and resubmit the required documents.
+                </p>
+                {kycDocument && kycDocument.status === 'pending' && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Note: Your overall KYC status is pending, but some documents were rejected. Please update the rejected documents to proceed.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* User Information Display */}
         {user && (
@@ -658,21 +886,21 @@ const KYCPage = () => {
                 formElement.dispatchEvent(formEvent);
               }
             }}
-            disabled={hasSubmittedRef.current || isSubmitting || isSubmittingForm}
+            disabled={hasSubmittedRef.current || (isSubmitting && !isUpdating) || (isUpdating && !isSubmitting) || isSubmittingForm}
             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             {hasSubmittedRef.current ? (
               <>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Submitted
+                {hasRejectedDocuments ? 'Updated' : 'Submitted'}
               </>
-            ) : isSubmitting || isSubmittingForm ? (
+            ) : (isSubmitting || isUpdating || isSubmittingForm) ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isSubmittingForm ? 'Uploading files...' : 'Submitting KYC...'}
+                {isSubmittingForm ? 'Uploading files...' : (hasRejectedDocuments ? 'Updating KYC...' : 'Submitting KYC...')}
               </>
             ) : (
-              'Submit KYC'
+              hasRejectedDocuments ? 'Update KYC' : 'Submit KYC'
             )}
           </button>
         )}

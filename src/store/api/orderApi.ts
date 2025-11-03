@@ -1,10 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { CreateOrderRequest, CreateOrderResponse, Order } from "@/types/order";
 import { createBaseQueryWithToasts } from "./baseQuery";
+import { getApiUrl } from "@/config/apiConfig";
 
 export const orderApi = createApi({
   reducerPath: "orderApi",
-  baseQuery: createBaseQueryWithToasts("http://localhost/orders"),
+  baseQuery: createBaseQueryWithToasts(getApiUrl("ORDERS")),
   tagTypes: ["Order"],
   endpoints: (builder) => ({
     // Get all orders for the authenticated user

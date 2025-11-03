@@ -91,10 +91,10 @@ export const getSuccessMessage = (response: unknown, defaultMessage: string): st
 };
 
 // Custom KYC warning toast with action buttons
-export const showKYCWarningToast = () => {
+export const showKYCWarningToast = (status: 'pending' | 'rejected' = 'rejected') => {
   const toastId = toast.custom(
     (t) => {
-      return React.createElement(KYCWarningToast, { toast: t });
+      return React.createElement(KYCWarningToast, { toast: t, status });
     },
     {
       duration: Infinity, // Never auto-dismiss

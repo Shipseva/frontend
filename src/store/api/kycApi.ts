@@ -1,5 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createBaseQueryWithToasts } from './baseQuery';
+import { getApiUrl } from "@/config/apiConfig";
 
 export interface KYCDocument {
   aadharNumber: string;
@@ -38,9 +39,65 @@ export interface KYCResponse {
   };
 }
 
+export interface UserKYCDocument {
+  id: string;
+  aadhar: {
+    aadharBack: string;
+    aadharFront: string;
+    aadharNumber: string;
+    documentStatus: 'pending' | 'verified' | 'rejected';
+  };
+  pan: {
+    panBack: string;
+    panFront: string;
+    panNumber: string;
+    documentStatus: 'pending' | 'verified' | 'rejected';
+  };
+  ifsc?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  bankName?: string;
+  branchName?: string;
+  gstNumber?: string;
+  gstCertificate?: string;
+  businessType: 'individual' | 'business';
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateKYCData {
+  aadhar?: {
+    aadharNumber?: string;
+    aadharFront?: string;
+    aadharBack?: string;
+    documentStatus?: 'pending' | 'verified' | 'rejected';
+  };
+  pan?: {
+    panNumber?: string;
+    panFront?: string;
+    panBack?: string;
+    documentStatus?: 'pending' | 'verified' | 'rejected';
+  };
+  ifsc?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  bankName?: string;
+  branchName?: string;
+  gstNumber?: string;
+  gstCertificate?: string;
+  businessType?: 'individual' | 'business';
+}
+
+export interface UpdateKYCResponse {
+  success: boolean;
+  message: string;
+  data?: UserKYCDocument;
+}
+
 export const kycApi = createApi({
   reducerPath: 'kycApi',
-  baseQuery: createBaseQueryWithToasts("http://localhost"),
+  baseQuery: createBaseQueryWithToasts(getApiUrl("KYC")),
   endpoints: (builder) => ({
     submitKYC: builder.mutation<KYCResponse, KYCSubmissionData>({
       query: (kycData) => {
@@ -55,10 +112,24 @@ export const kycApi = createApi({
       query: () => '/kyc/status',
       providesTags: ['KYC'],
     }),
+    getUserDocuments: builder.query<UserKYCDocument[], void>({
+      query: () => '/kyc/userDocuments',
+      providesTags: ['KYC'],
+    }),
+    updateKYC: builder.mutation<UpdateKYCResponse, { id: string; data: UpdateKYCData }>({
+      query: ({ id, data }) => ({
+        url: `/kyc/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: ['KYC'],
+    }),
   }),
 });
 
 export const {
   useSubmitKYCMutation,
   useGetKYCStatusQuery,
+  useGetUserDocumentsQuery,
+  useUpdateKYCMutation,
 } = kycApi;

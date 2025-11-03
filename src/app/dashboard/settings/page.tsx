@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { 
   Settings, 
   User, 
@@ -11,13 +12,19 @@ import {
   Save,
   Eye,
   EyeOff,
-  CheckCircle
+  CheckCircle,
+  FileCheck
 } from 'lucide-react';
 import Link from 'next/link';
+import { RootState } from '@/store';
+import { Status } from '@/store/api/userApi';
+import { KYCStatusModal } from '@/components/KYCStatusModal';
 
 export default function SettingsPage() {
+  const { user } = useSelector((state: RootState) => state.user);
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
+  const [showKYCModal, setShowKYCModal] = useState(false);
   const [settings, setSettings] = useState({
     // Profile Settings
     firstName: 'John',
@@ -66,8 +73,14 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'kyc', label: 'KYC Verification', icon: FileCheck },
     { id: 'appearance', label: 'Appearance', icon: Palette }
   ];
+
+  const kycStatus = (user?.status as Status) || undefined;
+  const isVerified = kycStatus === Status.VERIFIED;
+  const isPending = kycStatus === Status.PENDING;
+  const isRejected = kycStatus === Status.REJECTED;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -364,6 +377,105 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* KYC Verification Settings */}
+            {activeTab === 'kyc' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">KYC Verification Status</h2>
+                
+                <div className="space-y-6">
+                  {isVerified ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                          </div>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h3 className="text-lg font-medium text-green-900">KYC Verified</h3>
+                          <p className="mt-1 text-sm text-green-700">
+                            Your KYC verification has been successfully completed and approved.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-6">
+                        <button
+                          type="button"
+                          onClick={() => window.location.href = '/dashboard/kyc'}
+                          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          View KYC Details
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`border rounded-lg p-6 ${
+                      isPending 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                            isPending ? 'bg-blue-100' : 'bg-yellow-100'
+                          }`}>
+                            {isPending ? (
+                              <FileCheck className="w-6 h-6 text-blue-600" />
+                            ) : (
+                              <CheckCircle className="w-6 h-6 text-yellow-600" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h3 className={`text-lg font-medium ${
+                            isPending ? 'text-blue-900' : 'text-yellow-900'
+                          }`}>
+                            {isPending ? 'KYC Verification Pending' : 'KYC Verification Required'}
+                          </h3>
+                          <p className={`mt-1 text-sm ${
+                            isPending ? 'text-blue-700' : 'text-yellow-700'
+                          }`}>
+                            {isPending
+                              ? 'Your KYC verification is under review. Please wait for approval or update your documents.'
+                              : 'Your KYC verification was rejected. Please update your documents to complete verification.'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-6 flex space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowKYCModal(true)}
+                          className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            isPending
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                          }`}
+                        >
+                          {isPending ? 'View Status' : 'Update KYC'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.location.href = '/dashboard/kyc'}
+                          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          Go to KYC Page
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">What is KYC Verification?</h4>
+                    <p className="text-sm text-gray-600">
+                      KYC (Know Your Customer) verification helps us ensure the security and authenticity of all users on our platform. 
+                      Please submit valid identification documents to complete your verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Appearance Settings */}
             {activeTab === 'appearance' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -431,6 +543,15 @@ export default function SettingsPage() {
           </form>
         </div>
       </div>
+
+      {/* KYC Status Modal */}
+      {kycStatus && !isVerified && (
+        <KYCStatusModal
+          isOpen={showKYCModal}
+          onClose={() => setShowKYCModal(false)}
+          status={isPending ? 'pending' : 'rejected'}
+        />
+      )}
     </div>
   );
 }
