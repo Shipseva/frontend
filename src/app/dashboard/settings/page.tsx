@@ -16,11 +16,13 @@ import {
   FileCheck
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { RootState } from '@/store';
 import { Status } from '@/store/api/userApi';
 import { KYCStatusModal } from '@/components/KYCStatusModal';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { user } = useSelector((state: RootState) => state.user);
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
@@ -112,10 +114,17 @@ export default function SettingsPage() {
           <nav className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const handleTabClick = () => {
+                if (tab.id === 'kyc') {
+                  router.push('/dashboard/kyc');
+                } else {
+                  setActiveTab(tab.id);
+                }
+              };
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={handleTabClick}
                   className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                     activeTab === tab.id
                       ? 'bg-primary text-white'
@@ -443,17 +452,15 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div className="mt-6 flex space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowKYCModal(true)}
-                          className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            isPending
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
-                              : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                          }`}
-                        >
-                          {isPending ? 'View Status' : 'Update KYC'}
-                        </button>
+                        {!isPending && (
+                          <button
+                            type="button"
+                            onClick={() => setShowKYCModal(true)}
+                            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-yellow-600 text-white hover:bg-yellow-700"
+                          >
+                            Update KYC
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => window.location.href = '/dashboard/kyc'}
