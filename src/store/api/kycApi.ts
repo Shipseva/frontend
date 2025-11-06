@@ -101,28 +101,24 @@ export const kycApi = createApi({
   endpoints: (builder) => ({
     submitKYC: builder.mutation<KYCResponse, KYCSubmissionData>({
       query: (kycData) => {
-        console.log('kycData', kycData);
         return ({
-        url: '/kyc',
+        url: '/',
         method: 'POST',
         body: kycData,
       })},
     }),
     getKYCStatus: builder.query<KYCResponse, void>({
-      query: () => '/kyc/status',
-      providesTags: ['KYC'],
+      query: () => '/status',
     }),
     getUserDocuments: builder.query<UserKYCDocument[], void>({
       query: () => '/userDocuments',
-      providesTags: ['KYC'],
     }),
     updateKYC: builder.mutation<UpdateKYCResponse, { id: string; data: UpdateKYCData }>({
       query: ({ id, data }) => ({
-        url: `/kyc/${id}`,
+        url: `/${id}`,
         method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: ['KYC'],
     }),
   }),
 });

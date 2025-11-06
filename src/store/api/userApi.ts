@@ -16,7 +16,7 @@ export const userApi = createApi({
   tagTypes: ["User"],
   endpoints: (builder) => ({
     getUser: builder.query<UserProfile, void>({
-      query: () => "get-current-user",
+      query: () => "/get-current-user",
       providesTags: ["User"],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
@@ -44,7 +44,7 @@ export const userApi = createApi({
     }),
         logoutUser: builder.mutation<{ message: string }, void>({
           query: () => ({
-            url: "logout",
+            url: "/logout",
             method: "POST",
           }),
           invalidatesTags: ["User"],

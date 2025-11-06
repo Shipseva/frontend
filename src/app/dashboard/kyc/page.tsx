@@ -207,12 +207,12 @@ const KYCPage = () => {
         const result = await updateKYC({ id: kycDocument.id, data: updateData }).unwrap();
         console.log('✅ KYC UPDATE SUCCESS:', result);
         
+        // Toast is automatically shown by baseQueryWithToasts
+        // Only navigate to dashboard on success
         if (result.success) {
-          toast.success('KYC updated successfully! Your documents are under review.');
           router.push('/dashboard');
-        } else {
-          toast.error(result.message || 'Failed to update KYC. Please try again.');
         }
+        // If result.success is false, stay on the page (error toast already shown by baseQuery)
       } else {
         // Create new KYC submission
         const kycData: KYCSubmissionData = {
@@ -244,17 +244,16 @@ const KYCPage = () => {
         const result = await submitKYC(kycData).unwrap();
         console.log('✅ KYC SUBMISSION SUCCESS:', result);
         
+        // Toast is automatically shown by baseQueryWithToasts
+        // Only navigate to dashboard on success
         if (result.success) {
-          toast.success('KYC submitted successfully! Your documents are under review.');
           router.push('/dashboard');
-        } else {
-          toast.error(result.message || 'Failed to submit KYC. Please try again.');
         }
+        // If result.success is false, stay on the page (error toast already shown by baseQuery)
       }
     } catch (error: unknown) {
       console.error('❌ KYC SUBMISSION ERROR:', error);
-      const errorMessage = (error as { data?: { message?: string } })?.data?.message || 'Failed to submit KYC. Please try again.';
-      toast.error(errorMessage);
+      // Error toast is automatically shown by baseQueryWithToasts
       // Reset submission state on error so user can try again
       hasSubmittedRef.current = false;
     } finally {
