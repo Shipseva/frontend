@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, CheckCircle, AlertCircle, FileText, Building2, Loader2, Clock } from 'lucide-react';
@@ -23,6 +23,7 @@ const KYCPage = () => {
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const isSubmittingRef = useRef(false);
   const hasSubmittedRef = useRef(false);
+  const hasShownRejectedToastRef = useRef(false);
   
   // API hooks
   const [submitKYC, { isLoading: isSubmitting }] = useSubmitKYCMutation();
@@ -45,19 +46,24 @@ const KYCPage = () => {
     kycDocument.aadhar.documentStatus === 'pending' &&
     kycDocument.pan.documentStatus === 'pending';
   
-  const rejectedDocumentsList: string[] = [];
-  const rejectedDocumentsMap: { [key: string]: boolean } = {};
-  
-  if (kycDocument) {
-    if (kycDocument.aadhar.documentStatus === 'rejected') {
-      rejectedDocumentsList.push('Aadhar Card');
-      rejectedDocumentsMap.aadhar = true;
+  // Memoize rejected documents list to prevent unnecessary re-renders
+  const { rejectedDocumentsList, rejectedDocumentsMap } = useMemo(() => {
+    const list: string[] = [];
+    const map: { [key: string]: boolean } = {};
+    
+    if (kycDocument) {
+      if (kycDocument.aadhar.documentStatus === 'rejected') {
+        list.push('Aadhar Card');
+        map.aadhar = true;
+      }
+      if (kycDocument.pan.documentStatus === 'rejected') {
+        list.push('PAN Card');
+        map.pan = true;
+      }
     }
-    if (kycDocument.pan.documentStatus === 'rejected') {
-      rejectedDocumentsList.push('PAN Card');
-      rejectedDocumentsMap.pan = true;
-    }
-  }
+    
+    return { rejectedDocumentsList: list, rejectedDocumentsMap: map };
+  }, [kycDocument?.aadhar.documentStatus, kycDocument?.pan.documentStatus]);
   
   // Prefill initial values from existing document if available
   const getInitialValues = () => {
@@ -604,13 +610,19 @@ const KYCPage = () => {
     }
   };
 
-  // Show toast for rejected documents
+  // Show toast for rejected documents (only once)
   useEffect(() => {
-    if (hasRejectedDocuments && rejectedDocumentsList.length > 0) {
+    if (hasRejectedDocuments && rejectedDocumentsList.length > 0 && !hasShownRejectedToastRef.current) {
+      hasShownRejectedToastRef.current = true;
       toast.error(
         `The following documents need to be updated: ${rejectedDocumentsList.join(', ')}`,
         { duration: 6000 }
       );
+    }
+    
+    // Reset the ref if documents are no longer rejected (e.g., after update)
+    if (!hasRejectedDocuments) {
+      hasShownRejectedToastRef.current = false;
     }
   }, [hasRejectedDocuments, rejectedDocumentsList]);
 

@@ -3,17 +3,49 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PreSignedUrlRequest, PreSignedUrlResponse } from '@/types/upload';
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+// Function to get S3 client (initialized with validated credentials)
+function getS3Client(region: string, accessKeyId: string, secretAccessKey: string) {
+  return new S3Client({
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate AWS configuration
+    const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.S3_BUCKET_NAME;
+    const region = process.env.AWS_REGION;
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (!bucketName) {
+      console.error('AWS S3 Bucket name is not configured. Check AWS_S3_BUCKET_NAME or S3_BUCKET_NAME environment variable.');
+      return NextResponse.json(
+        { error: 'S3 bucket configuration is missing. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    if (!region) {
+      console.error('AWS Region is not configured. Check AWS_REGION environment variable.');
+      return NextResponse.json(
+        { error: 'AWS region configuration is missing. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    if (!accessKeyId || !secretAccessKey) {
+      console.error('AWS credentials are not configured. Check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.');
+      return NextResponse.json(
+        { error: 'AWS credentials are missing. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
     // Parse request body
     const body: PreSignedUrlRequest = await request.json();
     const { fileName, fileType, fileSize, documentType, folderPath } = body;
@@ -57,9 +89,12 @@ export async function POST(request: NextRequest) {
     const baseFolder = folderPath || 'uploads'; // Use custom folder or default to 'uploads'
     const s3Key = `${baseFolder}/${documentType}/${timestamp}_${fileName}`;
 
+    // Initialize S3 client with validated credentials
+    const s3Client = getS3Client(region, accessKeyId, secretAccessKey);
+
     // Create PutObject command
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Bucket: bucketName,
       Key: s3Key,
       ContentType: fileType,
       ContentLength: fileSize,
@@ -77,7 +112,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Construct the final file URL
-    const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+    const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3Key}`;
 
     const response: PreSignedUrlResponse = {
       uploadUrl,
