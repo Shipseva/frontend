@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useLogoutUserMutation } from "@/store/api/userApi";
 import { 
@@ -28,6 +28,24 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileOpen]);
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Package },
@@ -107,7 +125,7 @@ export default function Navbar({ user, currentPath }: NavbarProps) {
 
             {/* Profile Dropdown */}
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50"
