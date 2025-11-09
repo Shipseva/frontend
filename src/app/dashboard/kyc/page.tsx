@@ -66,8 +66,9 @@ const KYCPage = () => {
   }, [kycDocument?.aadhar.documentStatus, kycDocument?.pan.documentStatus]);
   
   // Prefill initial values from existing document if available
+  // Prefill when: has rejected documents OR overall status is rejected
   const getInitialValues = () => {
-    if (hasRejectedDocuments && kycDocument) {
+    if ((hasRejectedDocuments || kycDocument?.status === 'rejected') && kycDocument) {
       return {
         panNumber: kycDocument.pan.panNumber || '',
         panDocument: null as File | null,
@@ -151,12 +152,15 @@ const KYCPage = () => {
       console.log('📋 UPLOADED URLS:', uploadedUrls);
       
       // Step 3: Check if we're updating existing KYC or creating new one
-      if (hasRejectedDocuments && kycDocument) {
+      // Update if: has rejected documents OR overall status is rejected OR documents exist
+      if ((hasRejectedDocuments || kycDocument?.status === 'rejected') && kycDocument) {
         // Update existing KYC - only send changed fields
         const updateData: UpdateKYCData = {};
+        const isStatusRejected = kycDocument.status === 'rejected';
         
-        // Update aadhar if rejected or if new files are uploaded or if number is changed
-        const shouldUpdateAadhar = rejectedDocumentsMap.aadhar || 
+        // Update aadhar if rejected, status is rejected, or if new files are uploaded or if number is changed
+        const shouldUpdateAadhar = isStatusRejected || 
+          rejectedDocumentsMap.aadhar || 
           uploadedUrls.aadharFront || 
           uploadedUrls.aadharBack ||
           (formValues.aadharNumber && formValues.aadharNumber !== kycDocument.aadhar.aadharNumber);
@@ -170,8 +174,9 @@ const KYCPage = () => {
           };
         }
         
-        // Update pan if rejected or if new file is uploaded or if number is changed
-        const shouldUpdatePan = rejectedDocumentsMap.pan || 
+        // Update pan if rejected, status is rejected, or if new file is uploaded or if number is changed
+        const shouldUpdatePan = isStatusRejected || 
+          rejectedDocumentsMap.pan || 
           uploadedUrls.panDocument ||
           (formValues.panNumber && formValues.panNumber !== kycDocument.pan.panNumber);
         
@@ -636,10 +641,19 @@ const KYCPage = () => {
     );
   }
 
-  // If documents exist and all documents are pending (not rejected), show status message
-  // If documents exist and no rejected documents, show status message
-  // If status is pending but has rejected documents, show form to update
-  if (hasDocuments && kycDocument && (allDocumentsPending || (!hasRejectedDocuments && kycDocument.status !== 'rejected'))) {
+  // Show status message only when:
+  // 1. All documents are pending (not rejected) AND status is not rejected, OR
+  // 2. Status is approved
+  // Show form when:
+  // 1. Status is rejected (regardless of document status), OR
+  // 2. There are rejected documents, OR
+  // 3. No documents exist
+  const shouldShowStatusMessage = hasDocuments && kycDocument && 
+    kycDocument.status !== 'rejected' && 
+    !hasRejectedDocuments && 
+    (allDocumentsPending || kycDocument.status === 'approved');
+
+  if (shouldShowStatusMessage) {
     const isPending = kycDocument.status === 'pending';
     const isApproved = kycDocument.status === 'approved';
 
@@ -727,22 +741,26 @@ const KYCPage = () => {
         <p className="text-gray-600 mt-2">Complete your identity verification to access all features</p>
         
         {/* Rejected Documents Warning */}
-        {hasRejectedDocuments && rejectedDocumentsList.length > 0 && (
+        {((hasRejectedDocuments && rejectedDocumentsList.length > 0) || kycDocument?.status === 'rejected') && (
           <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-red-900 mb-1">
-                  Documents Requiring Update
+                  {kycDocument?.status === 'rejected' 
+                    ? 'KYC Verification Rejected' 
+                    : 'Documents Requiring Update'}
                 </h3>
                 <p className="text-sm text-red-700">
-                  {rejectedDocumentsList.length === 1 
-                    ? `Your ${rejectedDocumentsList[0]} has been rejected and needs to be updated.`
-                    : `The following documents have been rejected and need to be updated: ${rejectedDocumentsList.join(' and ')}.`
+                  {kycDocument?.status === 'rejected' 
+                    ? 'Your KYC verification has been rejected. Please update your documents and resubmit for review.'
+                    : rejectedDocumentsList.length === 1 
+                      ? `Your ${rejectedDocumentsList[0]} has been rejected and needs to be updated.`
+                      : `The following documents have been rejected and need to be updated: ${rejectedDocumentsList.join(' and ')}.`
                   }
-                  {' '}Please review and resubmit the required documents.
+                  {kycDocument?.status !== 'rejected' && ' Please review and resubmit the required documents.'}
                 </p>
-                {kycDocument && kycDocument.status === 'pending' && (
+                {kycDocument && kycDocument.status === 'pending' && hasRejectedDocuments && (
                   <p className="text-xs text-red-600 mt-2">
                     Note: Your overall KYC status is pending, but some documents were rejected. Please update the rejected documents to proceed.
                   </p>
@@ -911,15 +929,15 @@ const KYCPage = () => {
             {hasSubmittedRef.current ? (
               <>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                {hasRejectedDocuments ? 'Updated' : 'Submitted'}
+                {(hasRejectedDocuments || kycDocument?.status === 'rejected') ? 'Updated' : 'Submitted'}
               </>
             ) : (isSubmitting || isUpdating || isSubmittingForm) ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isSubmittingForm ? 'Uploading files...' : (hasRejectedDocuments ? 'Updating KYC...' : 'Submitting KYC...')}
+                {isSubmittingForm ? 'Uploading files...' : ((hasRejectedDocuments || kycDocument?.status === 'rejected') ? 'Updating KYC...' : 'Submitting KYC...')}
               </>
             ) : (
-              hasRejectedDocuments ? 'Update KYC' : 'Submit KYC'
+              (hasRejectedDocuments || kycDocument?.status === 'rejected') ? 'Update KYC' : 'Submit KYC'
             )}
           </button>
         )}
